@@ -41,7 +41,7 @@ public class UsuarioConnection {
             DB_CONNECTION = DriverManager.getConnection(stringConnection);
 
         } catch (SQLException ex) {
-            // Cachar errores
+            // Manejar errores
             System.out.println("SQLException: " + ex.getMessage());
             System.out.println("NO SE PUDO CONECTAR A LA BASE DE DATOS.");
         }

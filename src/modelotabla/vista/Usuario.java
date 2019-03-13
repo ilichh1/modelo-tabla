@@ -10,6 +10,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.ResultSet;
+import java.util.Vector;
 import javax.swing.table.DefaultTableModel;
 
 /**
@@ -17,47 +18,67 @@ import javax.swing.table.DefaultTableModel;
  * @author ilichh1
  */
 public class Usuario extends javax.swing.JFrame {
+    private String parametroBusqueda = null;
 
     /**
      * Creates new form Usuario
      */
     public Usuario() {
         initComponents();
-        this.getUsersData();
-    }
-    
-    private void getUsersData() {
         try {
-            Connection conexion = UsuarioConnection.getDataBaseConnection();
-            Statement stmt = conexion.createStatement();
-            stmt.execute("SELECT * FROM usuario");
-            ResultSet rs = stmt.getResultSet();
-            rs.last();
-            int columnCount = rs.getMetaData().getColumnCount();
-            int rowCount = rs.getRow();
-            rs.beforeFirst(); // Regresarse al principio
-            String[][] data = new String[rowCount][columnCount];
-            String[] columnNames = new String[columnCount];
-            for (int i = 0; i < columnCount; i++) {
-                columnNames[i] = rs.getMetaData().getColumnName(i+1);
-            }
-            int rowCounter = 0;
-            while (rs.next()) {
-                for (int i = 0; i < columnCount; i++) {
-                    data[rowCounter][i] = rs.getString(i+1);
-                }
-                rowCounter += 1;
-            }
-            this.createAndSetTableModel(columnNames, data);
-        } catch (SQLException ex) {
-            System.out.println("SQLException: " + ex.getMessage());
-            System.out.println("SQLState: " + ex.getSQLState());
-            System.out.println("VendorError: " + ex.getErrorCode());
+            this.getUsersData();
+        } catch(Exception ex) {
+            System.out.println("Exception: " +ex.getMessage());
+            System.out.println("NO SE PUDIERON INICIALIZAR LOS DATOS.");
         }
     }
     
-    private void createAndSetTableModel(String[] columns, String[][] data) {
-        DefaultTableModel tableModel = new DefaultTableModel(data, columns);
+    private void getUsersData() throws SQLException {
+        String sqlQuery;
+        if (    parametroBusqueda != null
+            && !parametroBusqueda.isEmpty()
+            && !parametroBusqueda.isBlank() ) // Validar el string
+        {
+            // Solo buscamos por nombres y apellidos
+            sqlQuery = "SELECT * FROM usuario"
+                    + " WHERE nombres LIKE '%"+parametroBusqueda+"%'"
+                    + " OR apellidos LIKE '%"+parametroBusqueda+"%';";
+        } else {
+            sqlQuery = "SELECT * FROM usuario;";
+        }
+        ResultSet rs = this.makeQuery(sqlQuery);
+        int columnCount = rs.getMetaData().getColumnCount();
+        Vector<String> columnNames = new Vector<String>();
+        for (int i = 0; i < columnCount; i++) {
+            columnNames.addElement(rs.getMetaData().getColumnName(i+1));
+        }
+        
+        Vector<Vector> filas = new Vector<>();
+        while (rs.next()) {
+            Vector<String> tupla = new Vector<>();
+            for (int i = 0; i < columnCount; i++) {
+                tupla.addElement(rs.getString(i+1));
+            }
+            filas.addElement(tupla);
+        }
+        this.createAndSetTableModel(filas, columnNames);
+    }
+    
+    private ResultSet makeQuery(String sqlQuery) {
+        try {
+            Connection conexion = UsuarioConnection.getDataBaseConnection();
+            Statement stmt = conexion.createStatement();
+            stmt.execute(sqlQuery);
+            return stmt.getResultSet();
+        } catch (SQLException ex) {
+            System.out.println("SQLException: " + ex.getMessage());
+            System.out.println("LA CONSULTA ES INCORRECTA");
+        }
+        return null;
+    }
+    
+    private void createAndSetTableModel(Vector data, Vector columnNames) {
+        DefaultTableModel tableModel = new DefaultTableModel(data, columnNames);
         jTable1.setModel(tableModel);
     }
 
@@ -74,7 +95,7 @@ public class Usuario extends javax.swing.JFrame {
         jScrollPane1 = new javax.swing.JScrollPane();
         jTable1 = new javax.swing.JTable();
         jButton1 = new javax.swing.JButton();
-        jTextField1 = new javax.swing.JTextField();
+        busquedaTXT = new javax.swing.JTextField();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
@@ -101,12 +122,6 @@ public class Usuario extends javax.swing.JFrame {
             }
         });
 
-        jTextField1.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jTextField1ActionPerformed(evt);
-            }
-        });
-
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
@@ -117,7 +132,7 @@ public class Usuario extends javax.swing.JFrame {
                     .addGroup(layout.createSequentialGroup()
                         .addComponent(jLabel1)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                        .addComponent(jTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, 139, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addComponent(busquedaTXT, javax.swing.GroupLayout.PREFERRED_SIZE, 139, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addComponent(jButton1))
                     .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 571, Short.MAX_VALUE))
@@ -130,7 +145,7 @@ public class Usuario extends javax.swing.JFrame {
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jLabel1)
                     .addComponent(jButton1)
-                    .addComponent(jTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(busquedaTXT, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 370, Short.MAX_VALUE)
                 .addContainerGap())
@@ -139,20 +154,22 @@ public class Usuario extends javax.swing.JFrame {
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
-    private void jTextField1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTextField1ActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_jTextField1ActionPerformed
-
     private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
-        System.out.println("Realizar query con parametro");
+        parametroBusqueda = busquedaTXT.getText();
+        try {
+            this.getUsersData();
+        } catch (SQLException ex) {
+            System.out.println("SQLException "+ex);
+            System.out.println("NO SE PUEDO CONSULTAR LA BD.");
+        }
     }//GEN-LAST:event_jButton1ActionPerformed
 
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JTextField busquedaTXT;
     private javax.swing.JButton jButton1;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JTable jTable1;
-    private javax.swing.JTextField jTextField1;
     // End of variables declaration//GEN-END:variables
 }
